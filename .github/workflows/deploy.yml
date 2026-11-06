@@ -14,10 +14,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # `secrets` context is only available in step-level `if` — gate everything on this step.
+      # `secrets` context is not allowed inside step/job `if` — pass it via env and branch in bash.
       - id: gate
-        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
-        run: echo "ready=true" >> "$GITHUB_OUTPUT"
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$CF_API_TOKEN" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
 
       # ——— suggest worker (worker/wrangler.jsonc) ———
       - uses: cloudflare/wrangler-action@v3
