@@ -1,0 +1,19 @@
+{
+  // MITS suggestion intake worker.
+  // Deploys via GitHub Actions on every push to main (see README), or locally: npx wrangler deploy
+  // KV namespace SUGGESTIONS is already provisioned. One secret remains:
+  //   npx wrangler secret put ADMIN_TOKEN   → token required for GET /suggest (admin queue)
+  "name": "mits-suggest",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "kv_namespaces": [
+    {
+      "binding": "SUGGESTIONS",
+      "id": "3abb31cc98744a4c80c956730422b19b"
+    }
+  ],
+  "vars": {
+    // Comma-separated origins allowed to call the API from a browser.
+    "ALLOWED_ORIGINS": "https://mits.my,https://www.mits.my,http://localhost:4321,http://127.0.0.1:4321"
+  }
+}

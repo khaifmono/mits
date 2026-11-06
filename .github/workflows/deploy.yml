@@ -1,0 +1,44 @@
+name: Deploy
+
+# Commit → auto-update: every push to main deploys the suggest worker and the site to Cloudflare.
+# The jobs self-skip until the repository secrets exist, so the first pushes stay green.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  worker:
+    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+
+  site:
+    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          PUBLIC_SUGGEST_API_URL: ${{ vars.PUBLIC_SUGGEST_API_URL }}
+          PUBLIC_REPO_URL: ${{ vars.PUBLIC_REPO_URL }}
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=mits --branch=main

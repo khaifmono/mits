@@ -1,0 +1,75 @@
+---
+import '../styles/global.css';
+import { Terminal } from '@lucide/astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'MITS — More Independent Toolset & Software',
+  description = 'Curated open-source alternatives to reclaim your infrastructure and own your data.',
+} = Astro.props;
+
+const path = Astro.url.pathname;
+const favicon =
+  "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%2334d399'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='m4%2017%206-6-6-6'/%3E%3Cpath%20d='m12%2019%208-8-8-8'/%3E%3C/svg%3E";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#09090b" />
+    <link rel="icon" href={favicon} />
+    <title>{title}</title>
+  </head>
+  <body class="flex min-h-screen flex-col font-sans">
+    <header class="sticky top-0 z-40 border-b border-white/10 bg-zinc-950/80 backdrop-blur">
+      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+        <a href="/" class="flex items-center gap-2 font-mono font-semibold tracking-tight text-zinc-100">
+          <Terminal class="size-5 text-emerald-400" aria-hidden="true" />
+          MITS<span class="text-zinc-600">.my</span>
+        </a>
+        <nav class="flex items-center gap-1 text-sm" aria-label="Main">
+          <a
+            href="/"
+            class:list={[
+              'rounded-md px-3 py-1.5 transition',
+              path === '/' ? 'bg-white/10 text-zinc-100' : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-100',
+            ]}
+          >
+            Explore
+          </a>
+          <a
+            href="/submit"
+            class:list={[
+              'rounded-md px-3 py-1.5 transition',
+              path.startsWith('/submit') ? 'bg-white/10 text-zinc-100' : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-100',
+            ]}
+          >
+            Suggest a tool
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <slot />
+    </main>
+
+    <footer class="mt-16 border-t border-white/10">
+      <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+        <p class="font-mono text-xs">MITS — More Independent Toolset &amp; Software · mits.my</p>
+        <p class="text-xs">
+          Every entry lives in <code class="font-mono text-emerald-400/80">data/tools.json</code> —
+          <a href="/submit" class="text-emerald-400 hover:underline">suggest or PR</a> to add yours.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

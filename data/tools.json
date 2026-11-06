@@ -1,0 +1,275 @@
+[
+  {
+    "id": "coolify",
+    "name": "Coolify",
+    "tagline": "Self-hostable PaaS — an open-source Heroku/Vercel alternative.",
+    "description": "Coolify turns any server into your own application platform: git-push deployments, one-click databases, automatic SSL and managed cron, all through a clean UI. Everything runs on hardware you control, so no platform can rate-limit, reprice, or shut down your stack.",
+    "category": "PaaS & Containers",
+    "alternativeTo": ["Heroku", "Vercel", "Netlify", "Railway"],
+    "repoUrl": "https://github.com/coollabsio/coolify",
+    "siteUrl": "https://coolify.io",
+    "license": "Apache-2.0",
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Medium (1-2GB RAM)",
+    "featured": true,
+    "addedAt": "2026-10-02",
+    "dockerCompose": "# Minimal dev setup — for production use the official install script:\n# curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash\nservices:\n  coolify:\n    image: 'ghcr.io/coollabsio/coolify:latest'\n    restart: always\n    container_name: coolify\n    ports:\n      - '8000:8080'\n    env_file:\n      - .env\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock\n      - ~/.coolify:/data\n    depends_on:\n      - postgres\n      - redis\n  postgres:\n    image: 'postgres:16-alpine'\n    restart: always\n    environment:\n      POSTGRES_USER: ${DB_USERNAME:-postgres}\n      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}\n      POSTGRES_DB: ${DB_DATABASE:-coolify}\n    volumes:\n      - coolify-db:/var/lib/postgresql/data\n  redis:\n    image: 'redis:7-alpine'\n    restart: always\n    volumes:\n      - coolify-redis:/data\nvolumes:\n  coolify-db:\n  coolify-redis:",
+    "independence": {
+      "dataFormat": "App definitions and configs live in your own PostgreSQL instance and Docker; exportable and migratable at will.",
+      "telemetry": "Anonymous telemetry exists but can be disabled in settings; no data leaves your server otherwise.",
+      "offline": "Runs entirely on your server; works on machines with no inbound cloud dependency."
+    }
+  },
+  {
+    "id": "uptime-kuma",
+    "name": "Uptime Kuma",
+    "tagline": "Self-hosted monitoring with a polished status page.",
+    "description": "Uptime Kuma monitors HTTP(s), TCP, DNS, Docker containers and more, with alerting to Slack, Discord, Telegram, email and dozens of other channels. A single container, a single SQLite file — your uptime history is yours, not a SaaS dashboard you rent.",
+    "category": "Observability & Uptime",
+    "alternativeTo": ["UptimeRobot", "Better Stack", "Pingdom"],
+    "repoUrl": "https://github.com/louislam/uptime-kuma",
+    "siteUrl": "https://uptime.kuma.pet",
+    "license": "MIT",
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Light (<512MB RAM)",
+    "featured": true,
+    "addedAt": "2026-10-05",
+    "dockerCompose": "services:\n  uptime-kuma:\n    image: louislam/uptime-kuma:1\n    container_name: uptime-kuma\n    restart: unless-stopped\n    ports:\n      - '3001:3001'\n    volumes:\n      - uptime-kuma-data:/app/data\nvolumes:\n  uptime-kuma-data:",
+    "independence": {
+      "dataFormat": "All monitors and history in one SQLite file under /app/data — copy it and you have migrated.",
+      "telemetry": "None. Metrics never leave your instance.",
+      "offline": "Runs fully offline; monitoring itself obviously needs network access."
+    }
+  },
+  {
+    "id": "vaultwarden",
+    "name": "Vaultwarden",
+    "tagline": "Lightweight Bitwarden-compatible password server.",
+    "description": "Vaultwarden implements the Bitwarden server API in a single lightweight container, working with every official Bitwarden client. Your vault stays encrypted end-to-end on hardware you own — the cloud never sees your secrets.",
+    "category": "Identity & Auth",
+    "alternativeTo": ["1Password", "Bitwarden Cloud", "Dashlane", "LastPass"],
+    "repoUrl": "https://github.com/dani-garcia/vaultwarden",
+    "siteUrl": "https://github.com/dani-garcia/vaultwarden",
+    "license": "GPL-3.0",
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Light (<512MB RAM)",
+    "featured": false,
+    "addedAt": "2026-10-09",
+    "dockerCompose": "services:\n  vaultwarden:\n    image: vaultwarden/server:latest\n    container_name: vaultwarden\n    restart: unless-stopped\n    environment:\n      DOMAIN: https://vaultwarden.example.com\n    ports:\n      - '80:80'\n    volumes:\n      - ./vw-data:/data",
+    "independence": {
+      "dataFormat": "Bitwarden's open, client-side-encrypted vault format; export to JSON at any time.",
+      "telemetry": "None.",
+      "offline": "Official Bitwarden apps cache your vault offline and sync when the server is reachable."
+    }
+  },
+  {
+    "id": "authentik",
+    "name": "Authentik",
+    "tagline": "Self-hosted identity provider — SSO, SAML, OIDC, LDAP.",
+    "description": "Authentik is a full identity provider: single sign-on, MFA, user federation, outbound/inbound SAML and OIDC, SCIM provisioning and a flexible policy engine. Replace per-app logins with one provider you administer, on infrastructure you own.",
+    "category": "Identity & Auth",
+    "alternativeTo": ["Okta", "Auth0", "Azure AD"],
+    "repoUrl": "https://github.com/goauthentik/authentik",
+    "siteUrl": "https://goauthentik.io",
+    "license": "MIT",
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Heavy (4GB+ RAM)",
+    "featured": true,
+    "addedAt": "2026-10-12",
+    "dockerCompose": "services:\n  postgres:\n    image: postgres:16-alpine\n    restart: unless-stopped\n    environment:\n      POSTGRES_USER: authentik\n      POSTGRES_PASSWORD: ${PG_PASS:?database password required}\n      POSTGRES_DB: authentik\n    volumes:\n      - authentik-db:/var/lib/postgresql/data\n    healthcheck:\n      test: ['CMD-SHELL', 'pg_isready -U authentik']\n      interval: 10s\n      timeout: 5s\n      retries: 5\n  redis:\n    image: redis:7-alpine\n    restart: unless-stopped\n    healthcheck:\n      test: ['CMD', 'redis-cli', 'ping']\n      interval: 10s\n      timeout: 5s\n      retries: 5\n  server:\n    image: ghcr.io/goauthentik/server:latest\n    restart: unless-stopped\n    command: server\n    environment: &authentik-env\n      AUTHENTIK_REDIS__HOST: redis\n      AUTHENTIK_POSTGRESQL__HOST: postgres\n      AUTHENTIK_POSTGRESQL__USER: authentik\n      AUTHENTIK_POSTGRESQL__NAME: authentik\n      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}\n      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?generate with openssl rand -base64 60}\n    ports:\n      - '9000:9000'\n      - '9443:9443'\n    depends_on:\n      postgres:\n        condition: service_healthy\n      redis:\n        condition: service_healthy\n  worker:\n    image: ghcr.io/goauthentik/server:latest\n    restart: unless-stopped\n    command: worker\n    environment: *authentik-env\n    depends_on:\n      postgres:\n        condition: service_healthy\n      redis:\n        condition: service_healthy\nvolumes:\n  authentik-db:",
+    "independence": {
+      "dataFormat": "Users, groups and flows in your PostgreSQL; standard protocols (SAML2, OIDC, SCIM, LDAP) mean zero lock-in downstream.",
+      "telemetry": "None by default.",
+      "offline": "Fully self-hosted; authentication works with no external identity service."
+    }
+  },
+  {
+    "id": "minio",
+    "name": "MinIO",
+    "tagline": "S3-compatible object storage you can run anywhere.",
+    "description": "MinIO exposes an S3-compatible API over plain storage you control, with versioning, encryption and Prometheus metrics built in. Point any S3 SDK or backup tool at it and drop the cloud-object-storage bill and data-egress lock-in.",
+    "category": "Storage & Sync",
+    "alternativeTo": ["AWS S3", "Google Cloud Storage", "Azure Blob Storage"],
+    "repoUrl": "https://github.com/minio/minio",
+    "siteUrl": "https://min.io",
+    "license": "AGPL-3.0",
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Medium (1-2GB RAM)",
+    "featured": false,
+    "addedAt": "2026-10-16",
+    "dockerCompose": "services:\n  minio:\n    image: minio/minio:latest\n    container_name: minio\n    restart: unless-stopped\n    command: server /data --console-address \":9001\"\n    environment:\n      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set a root user}\n      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set a strong password}\n    ports:\n      - '9000:9000'\n      - '9001:9001'\n    volumes:\n      - ./data:/data",
+    "independence": {
+      "dataFormat": "Speaks the S3 API — the industry standard — so clients swap by changing an endpoint URL. Objects are plain files on disk.",
+      "telemetry": "Metrics exposed only to your own Prometheus.",
+      "offline": "Fully offline-capable."
+    }
+  },
+  {
+    "id": "appflowy",
+    "name": "AppFlowy",
+    "tagline": "Local-first open-source Notion alternative.",
+    "description": "AppFlowy gives you docs, kanban boards, tables and calendars in a local-first app — your notes live in open formats on your device, with optional end-to-end-encrypted sync you can self-host. Productivity without handing your knowledge base to a vendor.",
+    "category": "Office & Knowledge",
+    "alternativeTo": ["Notion", "Confluence", "Coda"],
+    "repoUrl": "https://github.com/AppFlowy-IO/AppFlowy",
+    "siteUrl": "https://appflowy.io",
+    "license": "AGPL-3.0",
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Light (<512MB RAM)",
+    "featured": true,
+    "addedAt": "2026-10-19",
+    "dockerCompose": null,
+    "independence": {
+      "dataFormat": "Local-first: workspace data is stored on your device in open formats; cloud sync is optional and self-hostable (AppFlowy Cloud).",
+      "telemetry": "None required for core use.",
+      "offline": "A desktop/mobile app that works fully offline."
+    }
+  },
+  {
+    "id": "ollama",
+    "name": "Ollama",
+    "tagline": "Run large language models locally, one command.",
+    "description": "Ollama bundles model management and an OpenAI-compatible local API so you can run Llama, Qwen, Mistral and dozens of other open models on your own hardware. Prompts, documents and completions never leave your machine — the sovereign answer to metered AI APIs.",
+    "category": "Local AI",
+    "alternativeTo": ["OpenAI API", "Anthropic API", "Google Gemini API"],
+    "repoUrl": "https://github.com/ollama/ollama",
+    "siteUrl": "https://ollama.com",
+    "license": "MIT",
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Heavy (4GB+ RAM)",
+    "featured": true,
+    "addedAt": "2026-10-22",
+    "dockerCompose": "services:\n  ollama:\n    image: ollama/ollama:latest\n    container_name: ollama\n    restart: unless-stopped\n    ports:\n      - '11434:11434'\n    volumes:\n      - ollama:/root/.ollama\n    # NVIDIA GPU passthrough — uncomment:\n    # deploy:\n    #   resources:\n    #     reservations:\n    #       devices:\n    #         - driver: nvidia\n    #           count: all\n    #           capabilities: [gpu]\nvolumes:\n  ollama:",
+    "independence": {
+      "dataFormat": "Models stored locally in GGUF format; plain files you can back up and move.",
+      "telemetry": "None. Inference is local.",
+      "offline": "Fully offline once models are pulled."
+    }
+  },
+  {
+    "id": "umami",
+    "name": "Umami",
+    "tagline": "Privacy-focused, self-hosted web analytics.",
+    "description": "Umami is a simple, fast, cookieless analytics engine you host yourself — pageviews, referrers, devices and goals without third-party trackers or data sales. It is the analytics: the data belongs to you and your visitors, not an ad network.",
+    "category": "Observability & Uptime",
+    "alternativeTo": ["Google Analytics", "Adobe Analytics", "Mixpanel"],
+    "repoUrl": "https://github.com/umami-software/umami",
+    "siteUrl": "https://umami.is",
+    "license": "MIT",
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Light (<512MB RAM)",
+    "featured": false,
+    "addedAt": "2026-10-25",
+    "dockerCompose": "services:\n  umami:\n    image: ghcr.io/umami-software/umami:postgresql-latest\n    container_name: umami\n    restart: unless-stopped\n    ports:\n      - '3000:3000'\n    environment:\n      DATABASE_URL: postgresql://umami:umami@db:5432/umami\n      DATABASE_TYPE: postgresql\n      APP_SECRET: ${APP_SECRET:?replace with a random string}\n    depends_on:\n      db:\n        condition: service_healthy\n  db:\n    image: postgres:16-alpine\n    restart: unless-stopped\n    environment:\n      POSTGRES_DB: umami\n      POSTGRES_USER: umami\n      POSTGRES_PASSWORD: umami\n    volumes:\n      - ./schema.init.postgresql.sql:/docker-entrypoint-initdb.d/schema.init.postgresql.sql:ro\n    healthcheck:\n      test: ['CMD-SHELL', 'pg_isready -U umami']\n      interval: 5s\n      timeout: 5s\n      retries: 5",
+    "independence": {
+      "dataFormat": "All analytics in your own PostgreSQL/MySQL; CSV export built in.",
+      "telemetry": "It is the telemetry — cookieless, GDPR-friendly, and stored on your server.",
+      "offline": "Self-contained stack; measured sites must be online (inherent)."
+    }
+  },
+  {
+    "id": "infisical",
+    "name": "Infisical",
+    "tagline": "Open-source secret and config management for teams.",
+    "description": "Infisical centralizes .env files, API keys and certificates with client-side encryption, identity-bound access, secret rotation and a CI/CD-friendly CLI. Self-host it and your secrets stop being a line item on someone else's cloud.",
+    "category": "Developer Tools",
+    "alternativeTo": ["HashiCorp Vault", "AWS Secrets Manager", "Doppler"],
+    "repoUrl": "https://github.com/Infisical/infisical",
+    "siteUrl": "https://infisical.com",
+    "license": "MIT",
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Medium (1-2GB RAM)",
+    "featured": false,
+    "addedAt": "2026-10-28",
+    "dockerCompose": "services:\n  infisical:\n    image: infisical/infisical:latest\n    container_name: infisical\n    restart: unless-stopped\n    depends_on:\n      - db\n      - redis\n    ports:\n      - '3000:3000'\n    environment:\n      PORT: 3000\n      DATABASE_URL: postgresql://infisical:${DB_PASSWORD:?set a database password}@db:5432/infisical\n      REDIS_URL: redis://redis:6379\n      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?generate with openssl rand -base64 32}\n      JWT_SECRET: ${JWT_SECRET:?generate with openssl rand -base64 32}\n      APP_SITE_URL: http://localhost:3000\n  db:\n    image: postgres:16-alpine\n    restart: unless-stopped\n    environment:\n      POSTGRES_USER: infisical\n      POSTGRES_PASSWORD: ${DB_PASSWORD}\n      POSTGRES_DB: infisical\n    volumes:\n      - infisical-db:/var/lib/postgresql/data\n  redis:\n    image: redis:7-alpine\n    restart: unless-stopped\nvolumes:\n  infisical-db:",
+    "independence": {
+      "dataFormat": "Secrets are encrypted client-side (AES-256-GCM) before hitting your PostgreSQL; plain SQL dumps plus your key migrate everything.",
+      "telemetry": "Anonymous usage events can be disabled via environment flag.",
+      "offline": "Self-hosted stack; the CLI caches secrets for offline reads."
+    }
+  },
+  {
+    "id": "omp",
+    "name": "omp",
+    "tagline": "A coding agent with the IDE wired in.",
+    "description": "omp (oh-my-pi) is an agentic coding harness for the terminal with the IDE built in: LSP, debugging, 60+ model providers and a full toolset out of the box. It runs locally against providers you choose — including local models — so your agent workflow and session history stay on your machine.",
+    "category": "Developer Tools",
+    "alternativeTo": ["Claude Code", "GitHub Copilot", "Cursor"],
+    "repoUrl": "https://github.com/can1357/oh-my-pi",
+    "siteUrl": "https://omp.sh",
+    "license": null,
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Light (<512MB RAM)",
+    "featured": true,
+    "addedAt": "2026-11-01",
+    "dockerCompose": null,
+    "independence": {
+      "dataFormat": "Sessions live on disk in a readable local session format — grep-able, scriptable, yours.",
+      "telemetry": "No required account; you point it at whichever model provider you trust.",
+      "offline": "Local binary; works with local models (e.g. via Ollama)."
+    }
+  },
+  {
+    "id": "hermes",
+    "name": "Hermes",
+    "tagline": "Nous Research's desktop AI agent, running on your machine.",
+    "description": "Hermes Agent is a downloadable desktop app from Nous Research for running AI agent workflows locally with your own model keys. Conversation history and agent state stay on your device, making it a sovereign alternative to hosted AI assistants.",
+    "category": "Local AI",
+    "alternativeTo": ["ChatGPT", "Claude Desktop", "Manus"],
+    "repoUrl": "https://github.com/NousResearch/hermes-agent",
+    "siteUrl": "https://hermes-agent.nousresearch.com",
+    "license": null,
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Medium (1-2GB RAM)",
+    "featured": false,
+    "addedAt": "2026-11-02",
+    "dockerCompose": null,
+    "independence": {
+      "dataFormat": "Chats and agent history are stored on-device.",
+      "telemetry": "Prompts go only to the model endpoints you configure.",
+      "offline": "Core agent runs locally; inference depends on your chosen backend (local models work)."
+    }
+  },
+  {
+    "id": "herdr",
+    "name": "Herdr",
+    "tagline": "The runtime your coding agents live on.",
+    "description": "Herdr is an app for running coding agents that you shape by asking — mods reshape the whole interface. Agents live in herdr-core, a small server on your own machine, so terminals and sessions survive app restarts, updates and crashes across every machine you add.",
+    "category": "Developer Tools",
+    "alternativeTo": ["Claude Code", "GitHub Codespaces", "Warp"],
+    "repoUrl": "https://github.com/herdrdev/herdr",
+    "siteUrl": "https://herdr.dev",
+    "license": null,
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Light (<512MB RAM)",
+    "featured": true,
+    "addedAt": "2026-11-03",
+    "dockerCompose": null,
+    "independence": {
+      "dataFormat": "herdr-core keeps terminal and session state on your machine, not in a hosted workspace.",
+      "telemetry": "Local runtime; no required hosted service.",
+      "offline": "Local server + TUI; sessions persist offline."
+    }
+  },
+  {
+    "id": "honcho",
+    "name": "Honcho",
+    "tagline": "Open-source memory for AI agents.",
+    "description": "Honcho is open-source memory infrastructure that lets AI agents remember users across sessions and tools — from Claude Code to your own agents. Fully self-hostable via Docker, so the memory layer for your AI lives in your own database, not a vendor's.",
+    "category": "Local AI",
+    "alternativeTo": ["Mem0 Cloud", "Zep Cloud", "ChatGPT Memory"],
+    "repoUrl": null,
+    "siteUrl": "https://honcho.dev",
+    "license": null,
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Medium (1-2GB RAM)",
+    "featured": false,
+    "addedAt": "2026-11-04",
+    "dockerCompose": null,
+    "independence": {
+      "dataFormat": "Conversation and user-memory data lives in your own Postgres when self-hosted.",
+      "telemetry": "A self-hosted instance is self-contained.",
+      "offline": "Self-hostable via Docker; the hosted cloud is optional."
+    }
+  }
+]

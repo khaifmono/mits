@@ -1,0 +1,188 @@
+---
+import Base from '../layouts/Base.astro';
+import ToolCard from '../components/ToolCard.astro';
+import { Lightbulb, Search, SlidersHorizontal } from '@lucide/astro';
+import {
+  CATEGORIES,
+  INDEPENDENCE_LEVELS,
+  LICENSES,
+  RESOURCE_REQUIREMENTS,
+  RESOURCE_SHORT,
+  tools,
+} from '../lib/tools';
+
+const categoryCounts = new Map<string, number>(CATEGORIES.map((c) => [c, 0]));
+for (const t of tools) categoryCounts.set(t.category, (categoryCounts.get(t.category) ?? 0) + 1);
+
+// Initial DOM order: featured first, then newest.
+const sorted = [...tools].sort(
+  (a, b) =>
+    Number(b.featured) - Number(a.featured) ||
+    b.addedAt.localeCompare(a.addedAt) ||
+    a.name.localeCompare(b.name),
+);
+
+const selectClass =
+  'rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-sm text-zinc-300 focus:border-emerald-400/50 focus:outline-none';
+const labelClass = 'font-mono text-[10px] uppercase tracking-wider text-zinc-600';
+---
+
+<Base>
+  <section class="px-4 pb-10 pt-16 text-center sm:pt-20">
+    <p class="font-mono text-xs uppercase tracking-[0.3em] text-emerald-400">mits.my</p>
+    <h1 class="mx-auto mt-4 max-w-3xl text-4xl font-bold tracking-tight text-zinc-100 sm:text-5xl">
+      More Independent Toolset <span class="text-zinc-600">&amp;</span> Software
+    </h1>
+    <p class="mx-auto mt-4 max-w-2xl text-balance text-zinc-400">
+      Curated open-source alternatives to reclaim your infrastructure and own your data.
+    </p>
+    <div class="relative mx-auto mt-8 max-w-xl">
+      <Search class="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+      <input
+        id="search"
+        type="search"
+        placeholder='Search tools — or what they replace. Try "Notion"'
+        autocomplete="off"
+        spellcheck="false"
+        class="w-full rounded-lg border border-white/10 bg-white/[0.03] py-3 pl-11 pr-4 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-emerald-400/50 focus:outline-none focus:ring-1 focus:ring-emerald-400/30"
+      />
+    </div>
+  </section>
+
+  <section class="border-y border-white/10 bg-white/[0.01]">
+    <div class="mx-auto max-w-6xl space-y-3 px-4 py-4">
+      <div id="tabs" class="flex flex-wrap gap-1.5" role="tablist" aria-label="Categories">
+        <button type="button" data-cat="All" data-active class="tab tab-active">
+          All <span class="ml-0.5 text-zinc-500">{tools.length}</span>
+        </button>
+        {
+          CATEGORIES.map((c) => (
+            <button type="button" data-cat={c} class="tab">
+              {c} <span class="ml-0.5 text-zinc-600">{categoryCounts.get(c) ?? 0}</span>
+            </button>
+          ))
+        }
+      </div>
+
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <SlidersHorizontal class="size-4 text-zinc-600" aria-hidden="true" />
+        <label class="flex items-center gap-2">
+          <span class={labelClass}>Independence</span>
+          <select id="f-ind" class={selectClass}>
+            <option value="All">All</option>
+            {INDEPENDENCE_LEVELS.map((l) => <option value={l}>{l}</option>)}
+          </select>
+        </label>
+        <label class="flex items-center gap-2">
+          <span class={labelClass}>Resources</span>
+          <select id="f-res" class={selectClass}>
+            <option value="All">All</option>
+            {RESOURCE_REQUIREMENTS.map((r) => <option value={r}>{RESOURCE_SHORT[r]}</option>)}
+          </select>
+        </label>
+        <label class="flex items-center gap-2">
+          <span class={labelClass}>License</span>
+          <select id="f-lic" class={selectClass}>
+            <option value="All">All</option>
+            {LICENSES.map((l) => <option value={l}>{l}</option>)}
+          </select>
+        </label>
+        <label class="ml-auto flex items-center gap-2">
+          <span class={labelClass}>Sort</span>
+          <select id="f-sort" class={selectClass}>
+            <option value="featured">Featured</option>
+            <option value="name">Name A–Z</option>
+            <option value="added">Recently added</option>
+            <option value="score">Independence</option>
+          </select>
+        </label>
+        <span id="count" class="font-mono text-xs text-zinc-500" aria-live="polite"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-6xl px-4 py-8">
+    <div id="grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {sorted.map((t) => <ToolCard tool={t} />)}
+    </div>
+    <div id="empty" hidden class="py-24 text-center">
+      <p class="text-zinc-400">Nothing matches that.</p>
+      <a
+        href="/submit"
+        class="mt-4 inline-flex items-center gap-2 font-mono text-sm text-emerald-400 hover:underline"
+      >
+        <Lightbulb class="size-4" aria-hidden="true" />
+        Suggest the missing tool →
+      </a>
+    </div>
+  </section>
+
+  <noscript>
+    <div class="mx-auto max-w-6xl px-4 pb-8">
+      <p class="rounded-lg border border-white/10 bg-white/[0.02] p-4 text-sm text-zinc-500">
+        Search and filters need JavaScript — the full catalog is shown above.
+      </p>
+    </div>
+  </noscript>
+</Base>
+
+<script>
+  const search = document.getElementById('search') as HTMLInputElement;
+  const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>('#tabs [data-cat]'));
+  const fInd = document.getElementById('f-ind') as HTMLSelectElement;
+  const fRes = document.getElementById('f-res') as HTMLSelectElement;
+  const fLic = document.getElementById('f-lic') as HTMLSelectElement;
+  const fSort = document.getElementById('f-sort') as HTMLSelectElement;
+  const grid = document.getElementById('grid')!;
+  const cards = Array.from(grid.querySelectorAll<HTMLElement>('[data-tool]'));
+  const count = document.getElementById('count')!;
+  const empty = document.getElementById('empty')!;
+
+  function apply(): void {
+    const tokens = search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const cat = tabs.find((t) => t.hasAttribute('data-active'))?.dataset.cat ?? 'All';
+    const kept: HTMLElement[] = [];
+
+    for (const card of cards) {
+      const kw = card.dataset.keywords ?? '';
+      const ok =
+        tokens.every((t) => kw.includes(t)) &&
+        (cat === 'All' || card.dataset.category === cat) &&
+        (fInd.value === 'All' || card.dataset.independence === fInd.value) &&
+        (fRes.value === 'All' || card.dataset.resource === fRes.value) &&
+        (fLic.value === 'All' || card.dataset.license === fLic.value);
+      card.hidden = !ok;
+      if (ok) kept.push(card);
+    }
+
+    const byName = (a: HTMLElement, b: HTMLElement) => (a.dataset.name ?? '').localeCompare(b.dataset.name ?? '');
+    const comparators: Record<string, (a: HTMLElement, b: HTMLElement) => number> = {
+      featured: (a, b) =>
+        Number(b.dataset.featured) - Number(a.dataset.featured) ||
+        (b.dataset.added ?? '').localeCompare(a.dataset.added ?? '') ||
+        byName(a, b),
+      name: byName,
+      added: (a, b) => (b.dataset.added ?? '').localeCompare(a.dataset.added ?? '') || byName(a, b),
+      score: (a, b) => Number(b.dataset.score) - Number(a.dataset.score) || byName(a, b),
+    };
+    kept.sort(comparators[fSort.value] ?? comparators.featured!);
+    for (const card of kept) grid.appendChild(card);
+
+    count.textContent = `${kept.length} / ${cards.length} tools`;
+    empty.hidden = kept.length > 0;
+  }
+
+  for (const tab of tabs) {
+    tab.addEventListener('click', () => {
+      for (const t of tabs) {
+        t.toggleAttribute('data-active', t === tab);
+        t.classList.toggle('tab-active', t === tab);
+      }
+      apply();
+    });
+  }
+  for (const el of [fInd, fRes, fLic, fSort]) el.addEventListener('change', apply);
+  search.addEventListener('input', apply);
+
+  apply();
+</script>

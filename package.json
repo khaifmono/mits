@@ -1,0 +1,21 @@
+{
+  "name": "mits",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "validate": "node scripts/validate-tools.mjs"
+  },
+  "dependencies": {
+    "@lucide/astro": "^0.556.0",
+    "@tailwindcss/vite": "^4.1.4",
+    "astro": "^5.7.0",
+    "tailwindcss": "^4.1.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "sharp"]
+  }
+}

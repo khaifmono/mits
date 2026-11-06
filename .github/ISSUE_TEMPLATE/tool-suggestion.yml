@@ -1,0 +1,52 @@
+name: Suggest a tool
+description: Propose software for the MITS directory
+title: "[Suggestion] "
+labels: ["suggestion"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Tool name
+    validations:
+      required: true
+  - type: input
+    id: site
+    attributes:
+      label: Website
+    validations:
+      required: true
+  - type: input
+    id: repo
+    attributes:
+      label: Source code (if public)
+  - type: textarea
+    id: replaces
+    attributes:
+      label: What proprietary software does it replace?
+      placeholder: e.g. Datadog, Notion, Okta
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - PaaS & Containers
+        - Identity & Auth
+        - Observability & Uptime
+        - Storage & Sync
+        - Developer Tools
+        - Local AI
+        - Office & Knowledge
+    validations:
+      required: true
+  - type: input
+    id: license
+    attributes:
+      label: License
+      placeholder: MIT, Apache-2.0, AGPL-3.0… (or "proprietary download")
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is it independent / sovereign?
+      description: Data format, telemetry, offline capability.

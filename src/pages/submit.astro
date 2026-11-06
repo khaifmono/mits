@@ -1,0 +1,199 @@
+---
+import Base from '../layouts/Base.astro';
+import { Copy, FileJson, GitFork, Send } from '@lucide/astro';
+import { CATEGORIES } from '../lib/tools';
+
+const endpoint = import.meta.env.PUBLIC_SUGGEST_API_URL || 'http://localhost:8787';
+const repoUrl = (import.meta.env.PUBLIC_REPO_URL as string | undefined) || '';
+
+const template = JSON.stringify(
+  {
+    id: 'tool-slug',
+    name: 'Tool Name',
+    tagline: 'One-line description (≤120 chars).',
+    description: 'What it does and why it provides digital sovereignty.',
+    category: 'Developer Tools',
+    alternativeTo: ['Proprietary SaaS'],
+    repoUrl: 'https://github.com/you/tool',
+    siteUrl: 'https://tool.example',
+    license: 'MIT',
+    independenceLevel: '100% Sovereign',
+    resourceRequirement: 'Light (<512MB RAM)',
+    featured: false,
+    dockerCompose: 'services:\n  tool:\n    image: you/tool:latest',
+    addedAt: new Date().toISOString().slice(0, 10),
+  },
+  null,
+  2,
+);
+
+const fieldClass =
+  'w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-emerald-400/50 focus:outline-none focus:ring-1 focus:ring-emerald-400/30';
+const labelClass = 'mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-zinc-500';
+---
+
+<Base title="Suggest a tool — MITS">
+  <div class="mx-auto grid max-w-5xl gap-10 px-4 py-12 lg:grid-cols-5">
+    <section class="lg:col-span-3">
+      <h1 class="text-3xl font-bold tracking-tight text-zinc-100">Suggest a tool</h1>
+      <p class="mt-3 leading-relaxed text-zinc-400">
+        Know software that belongs here? Say <em>“add this tool too”</em> — suggestions land in the
+        maintainer queue and become directory entries.
+      </p>
+
+      <form id="suggest-form" class="mt-8 space-y-5" novalidate>
+        <div class="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label for="s-name" class={labelClass}>Tool name *</label>
+            <input id="s-name" name="name" type="text" required placeholder="e.g. Dockge" class={fieldClass} />
+          </div>
+          <div>
+            <label for="s-url" class={labelClass}>URL *</label>
+            <input id="s-url" name="url" type="url" required placeholder="https://…" class={fieldClass} />
+          </div>
+        </div>
+        <div>
+          <label for="s-replaces" class={labelClass}>What does it replace?</label>
+          <input id="s-replaces" name="replaces" type="text" placeholder="e.g. Datadog, Notion, Okta" class={fieldClass} />
+        </div>
+        <div>
+          <label for="s-category" class={labelClass}>Category</label>
+          <select id="s-category" name="category" class={fieldClass}>
+            <option value="">Not sure</option>
+            {CATEGORIES.map((c) => <option value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label for="s-notes" class={labelClass}>Why is it sovereign?</label>
+          <textarea
+            id="s-notes"
+            name="notes"
+            rows="4"
+            placeholder="Data format, telemetry, offline capability, license, resource needs…"
+            class={fieldClass}></textarea>
+        </div>
+        <div>
+          <label for="s-contact" class={labelClass}>Your email (optional)</label>
+          <input id="s-contact" name="contact" type="email" placeholder="you@example.com" class={fieldClass} />
+          <p class="mt-1 text-xs text-zinc-600">Only the maintainer sees this.</p>
+        </div>
+
+        <!-- honeypot: humans never see or fill this -->
+        <input type="text" name="website" class="hidden" tabindex="-1" autocomplete="off" aria-hidden="true" />
+
+        <button type="submit" id="submit-btn" class="btn btn-primary">
+          <Send class="size-4" aria-hidden="true" />
+          Send suggestion
+        </button>
+        <p id="form-status" class="text-sm" hidden aria-live="polite"></p>
+      </form>
+
+      <details id="fallback" class="mt-6">
+        <summary class="cursor-pointer font-mono text-xs text-zinc-500">
+          Service unreachable? Copy your suggestion instead
+        </summary>
+        <pre
+          class="mt-2 overflow-x-auto rounded-lg border border-white/10 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-zinc-400"><code id="fallback-json"></code></pre>
+        <button type="button" data-copy="fallback-json" class="btn btn-ghost mt-3">
+          <Copy class="size-3.5" aria-hidden="true" />
+          Copy details
+        </button>
+      </details>
+    </section>
+
+    <aside class="lg:col-span-2">
+      <div class="rounded-xl border border-white/10 bg-white/[0.02] p-5">
+        <h2 class="flex items-center gap-2 font-semibold text-zinc-100">
+          <GitFork class="size-4 text-emerald-400" aria-hidden="true" />
+          Prefer a pull request?
+        </h2>
+        <ol class="mt-4 list-inside list-decimal space-y-2.5 text-sm leading-relaxed text-zinc-400">
+          <li>
+            Fork the repo and edit
+            <code class="font-mono text-emerald-400/90">data/tools.json</code>.
+          </li>
+          <li>Follow the schema — grab the template below.</li>
+          <li>
+            Run <code class="font-mono text-emerald-400/90">pnpm validate</code>, then open a PR.
+            CI checks it; merge auto-deploys.
+          </li>
+        </ol>
+        {
+          repoUrl && (
+            <a
+              href={`${repoUrl}/edit/main/data/tools.json`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="mt-4 inline-flex items-center gap-1.5 font-mono text-xs text-emerald-400 hover:underline"
+            >
+              <FileJson class="size-3.5" aria-hidden="true" />
+              Edit tools.json on GitHub →
+            </a>
+          )
+        }
+        <button type="button" data-copy="entry-template" class="btn btn-ghost mt-5 w-full justify-center">
+          <Copy class="size-3.5" aria-hidden="true" />
+          Copy entry template
+        </button>
+        <pre
+          class="mt-3 max-h-72 overflow-auto rounded-lg border border-white/10 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-zinc-500">{template}</pre>
+      </div>
+    </aside>
+  </div>
+</Base>
+
+<script>
+  import '../scripts/copy';
+
+  const endpoint = import.meta.env.PUBLIC_SUGGEST_API_URL || 'http://localhost:8787';
+  const form = document.getElementById('suggest-form') as HTMLFormElement;
+  const status = document.getElementById('form-status')!;
+  const btn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const fallback = document.getElementById('fallback')!;
+  const fallbackJson = document.getElementById('fallback-json')!;
+  const btnHTML = btn.innerHTML;
+
+  function showStatus(text: string, ok: boolean): void {
+    status.textContent = text;
+    status.className = ok
+      ? 'rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2.5 text-sm text-emerald-300'
+      : 'rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2.5 text-sm text-red-300';
+    status.hidden = false;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const payload: Record<string, string> = {};
+    for (const k of ['name', 'url', 'replaces', 'category', 'notes', 'contact', 'website']) {
+      payload[k] = String(fd.get(k) ?? '').trim();
+    }
+
+    if (!payload.name) {
+      showStatus('Tool name is required.', false);
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = 'Sending…';
+    status.hidden = true;
+    try {
+      const res = await fetch(`${endpoint}/suggest`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      form.reset();
+      showStatus('Suggestion received — thank you. It is now queued for review.', true);
+    } catch {
+      showStatus('Could not reach the suggestion service. Copy your entry below and open an issue or PR instead.', false);
+      delete payload.website;
+      fallbackJson.textContent = JSON.stringify(payload, null, 2);
+      fallback.hidden = false;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = btnHTML;
+    }
+  });
+</script>
