@@ -33,18 +33,18 @@ Every path ends in `data/tools.json`; merges auto-deploy the static site.
 
 ## Deploy — commit → auto-update
 
-`.github/workflows/deploy.yml` deploys **both** the site and the worker to Cloudflare on every push to `main`. Jobs self-skip until the secrets below exist.
+`.github/workflows/deploy.yml` deploys **both** the site (Worker + static assets) and the suggest worker to Cloudflare on every push to `main`. Jobs self-skip until the secrets below exist.
 
 One-time setup (repo `khaifmono/mits`):
 
 ```bash
 # Cloudflare API token — dashboard → My Profile → API Tokens → Create Token,
-# template "Edit Cloudflare Workers", then ADD permission "Cloudflare Pages: Edit", account resources → your account
+# template "Edit Cloudflare Workers", account resources → your account
 gh secret set CLOUDFLARE_API_TOKEN
 gh secret set CLOUDFLARE_ACCOUNT_ID     # dashboard → Workers & Pages → right sidebar "Account ID"
 
 # Build-time variables (vars, not secrets)
-gh variable set PUBLIC_SUGGEST_API_URL="https://mits-suggest.<your-subdomain>.workers.dev"
+gh variable set PUBLIC_SUGGEST_API_URL="https://mits-suggest.kesatria-awan.workers.dev"
 gh variable set PUBLIC_REPO_URL="https://github.com/khaifmono/mits"
 ```
 
@@ -53,15 +53,13 @@ After that: `git push` = deployed. PRs that touch `data/tools.json` additionally
 Local deploys work too, since `wrangler login` is already authorized:
 
 ```bash
-cd worker && npx wrangler deploy          # worker
-pnpm build && npx wrangler pages deploy dist --project-name=mits   # site
+npx wrangler deploy            # site (root wrangler.jsonc — binds mits.my via custom_domain routes)
+cd worker && npx wrangler deploy   # suggest worker
 ```
-
-**Alternative** — Cloudflare Workers Builds: in the dashboard, Workers & Pages → connect the repo, root directory `worker`, deploy command `npx wrangler deploy`. Use this instead of the Actions job if you prefer dashboard-managed builds.
 
 ## Domain
 
-Point `mits.my` at the Pages project: dashboard → Workers & Pages → `mits` → Custom domains → add `mits.my` (zone must be on Cloudflare).
+`mits.my` / `www.mits.my` are declared as `custom_domain` routes in the root `wrangler.jsonc` and bind automatically on deploy — the `mits.my` zone must be on this Cloudflare account. Both origins are already in the suggest worker's `ALLOWED_ORIGINS`.
 
 ## Adding a tool
 

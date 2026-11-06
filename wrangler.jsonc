@@ -1,0 +1,21 @@
+{
+  // MITS site — Astro (Cloudflare adapter) deployed as a Worker with static assets.
+  // Deploys via GitHub Actions on every push to main (see README), or locally: npx wrangler deploy
+  "name": "mits",
+  "main": "dist/_worker.js/index.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page"
+  },
+  // Custom domains: uncomment once the mits.my zone is added to this Cloudflare account, then deploy.
+  // "routes": [
+  //   { "pattern": "mits.my", "custom_domain": true },
+  //   { "pattern": "www.mits.my", "custom_domain": true }
+  // ],
+  "observability": {
+    "enabled": true
+  }
+}
