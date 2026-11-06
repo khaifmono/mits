@@ -1,7 +1,7 @@
 name: Deploy
 
 # Commit → auto-update: every push to main deploys the suggest worker and the site to Cloudflare.
-# The jobs self-skip until the repository secrets exist, so the first pushes stay green.
+# Steps self-skip until the repository secrets exist, so the first pushes stay green.
 
 on:
   push:
@@ -9,35 +9,43 @@ on:
   workflow_dispatch:
 
 jobs:
-  worker:
-    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # `secrets` context is only available in step-level `if` — gate everything on this step.
+      - id: gate
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        run: echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      # ——— suggest worker (worker/wrangler.jsonc) ———
       - uses: cloudflare/wrangler-action@v3
+        if: steps.gate.outputs.ready == 'true'
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: worker
 
-  site:
-    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      # ——— site (root wrangler.jsonc: Worker + static assets) ———
       - uses: pnpm/action-setup@v4
+        if: steps.gate.outputs.ready == 'true'
         with:
           version: 10
       - uses: actions/setup-node@v4
+        if: steps.gate.outputs.ready == 'true'
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        if: steps.gate.outputs.ready == 'true'
       - run: pnpm build
+        if: steps.gate.outputs.ready == 'true'
         env:
           PUBLIC_SUGGEST_API_URL: ${{ vars.PUBLIC_SUGGEST_API_URL }}
           PUBLIC_REPO_URL: ${{ vars.PUBLIC_REPO_URL }}
       - uses: cloudflare/wrangler-action@v3
+        if: steps.gate.outputs.ready == 'true'
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
