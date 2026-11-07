@@ -120,7 +120,7 @@ export default {
         headers: {
           'access-control-allow-origin': origin,
           'access-control-allow-methods': 'POST, GET, OPTIONS',
-          'access-control-allow-headers': 'content-type, x-admin-token',
+          'access-control-allow-headers': 'content-type, x-admin-token, x-session',
           'access-control-max-age': '86400',
         },
       });
