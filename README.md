@@ -33,7 +33,9 @@ Every path ends in `data/tools.json`; merges auto-deploy the static site.
 
 ## Deploy — commit → auto-update
 
-`.github/workflows/deploy.yml` deploys **both** the site (Worker + static assets) and the suggest worker to Cloudflare on every push to `main`. Jobs self-skip until the secrets below exist.
+**Account note:** `mits.my` (plus azkhai.com, khaif.dev, mvsdev.com) lives in the **personal** Cloudflare account. Production runs there via Workers Builds (GitHub-connected) — never deploy mits to KESATRIA AWAN / KA-Clients; those hold business and client domains only.
+
+`.github/workflows/deploy.yml` deploys **both** the site (Worker + static assets) and the suggest worker to Cloudflare on every push to `main`. Jobs self-skip until the secrets below exist — when setting them, use the **personal** account's token and account ID.
 
 One-time setup (repo `khaifmono/mits`):
 
