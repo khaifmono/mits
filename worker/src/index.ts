@@ -130,19 +130,26 @@ export default {
       const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
       const rlKey = `rllogin:${ip}`;
       const attempts = parseInt((await env.SUGGESTIONS.get(rlKey)) ?? '0', 10);
-      if (attempts >= 5) return json({ error: 'too many attempts — try again in 15 minutes' }, 429, origin);
-      let body: { email?: unknown; password?: unknown };
+      if (attempts >= 20) return json({ error: 'too many attempts — try again in 15 minutes' }, 429, origin);
+      let body: unknown;
       try {
-        body = (await request.json()) as { email?: unknown; password?: unknown };
+        body = await request.json();
       } catch {
+        return json({ error: 'invalid JSON body' }, 400, origin);
+      }
+      if (typeof body !== 'object' || body === null) {
         return json({ error: 'invalid JSON body' }, 400, origin);
       }
       if (!env.ADMIN_EMAIL || !env.ADMIN_PASSWORD) {
         return json({ error: 'login not configured on this worker' }, 503, origin);
       }
       const ok = body.email === env.ADMIN_EMAIL && body.password === env.ADMIN_PASSWORD;
-      await env.SUGGESTIONS.put(rlKey, String(attempts + 1), { expirationTtl: 900 });
-      if (!ok) return json({ error: 'invalid email or password' }, 401, origin);
+      if (!ok) {
+        // only failed attempts count toward the limit
+        await env.SUGGESTIONS.put(rlKey, String(attempts + 1), { expirationTtl: 900 });
+        return json({ error: 'invalid email or password' }, 401, origin);
+      }
+      await env.SUGGESTIONS.delete(rlKey); // successful sign-in resets the counter
       const session = crypto.randomUUID();
       await env.SUGGESTIONS.put(`sess:${session}`, JSON.stringify({ ts: Date.now() }), { expirationTtl: SESSION_TTL });
       return json({ ok: true, session }, 200, origin);
