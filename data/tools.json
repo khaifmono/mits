@@ -344,5 +344,24 @@
     "featured": true,
     "dockerCompose": null,
     "addedAt": "2026-11-08"
+  },
+  {
+    "id": "beszel",
+    "name": "Beszel",
+    "tagline": "Lightweight server monitoring with historical graphs.",
+    "description": "Beszel monitors CPU, memory, disk, network and temperature across your machines through a tiny agent, with everything stored on your own server. No vendor account, no data leaving your network.",
+    "category": "Observability & Uptime",
+    "alternativeTo": [
+      "Netdata Cloud",
+      "Datadog"
+    ],
+    "repoUrl": "https://github.com/henrygd/beszel",
+    "siteUrl": "https://beszel.dev",
+    "license": "MIT",
+    "independenceLevel": "100% Sovereign",
+    "resourceRequirement": "Light (<512MB RAM)",
+    "featured": false,
+    "dockerCompose": null,
+    "addedAt": "2026-11-08"
   }
 ]
