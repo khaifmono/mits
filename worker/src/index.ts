@@ -121,7 +121,7 @@ export default {
           'access-control-allow-origin': origin,
           'access-control-allow-methods': 'POST, GET, DELETE, OPTIONS',
           'access-control-allow-headers': 'content-type, x-admin-token, x-session',
-          'access-control-max-age': '86400',
+          'access-control-max-age': '600',
         },
       });
     }
