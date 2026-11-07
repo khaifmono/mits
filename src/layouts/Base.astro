@@ -5,11 +5,13 @@ import { Terminal } from '@lucide/astro';
 interface Props {
   title?: string;
   description?: string;
+  noindex?: boolean;
 }
 
 const {
   title = 'MITS — More Independent Toolset & Software',
   description = 'Curated open-source alternatives to reclaim your infrastructure and own your data.',
+  noindex = false,
 } = Astro.props;
 
 const path = Astro.url.pathname;
@@ -24,6 +26,7 @@ const favicon =
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <meta name="theme-color" content="#09090b" />
     <link rel="icon" href={favicon} />
     <title>{title}</title>

@@ -63,6 +63,17 @@ cd worker && npx wrangler deploy   # suggest worker
 
 `mits.my` / `www.mits.my` are declared as `custom_domain` routes in the root `wrangler.jsonc` and bind automatically on deploy — the `mits.my` zone must be on this Cloudflare account. Both origins are already in the suggest worker's `ALLOWED_ORIGINS`.
 
+## Admin — accepting suggestions
+
+**`mits.my/admin`** (unlisted, `noindex`). Paste two tokens once — both stay in your browser's localStorage:
+
+- **Admin token** — the suggest worker's `ADMIN_TOKEN` (reads/deletes the queue)
+- **GitHub token** — PAT with **Contents: Read & write** on `khaifmono/mits` (commits accepted entries). Your existing `gh auth token` works.
+
+Flow per suggestion: **Accept → commit** opens a prefilled editor (fill tagline/description/license/…) → **Commit to data/tools.json** commits via the GitHub API → Workers Builds auto-deploys → **Delete** clears the queue entry. Or **Copy JSON** and do it manually. The page validates the entry against the schema before committing; CI re-validates.
+
+The queue API: `GET /suggest` lists, `DELETE /suggest?id=…` removes — both require the `x-admin-token` header.
+
 ## Adding a tool
 
 Entries follow the schema in `CONTRIBUTING.md`. Validate locally with `pnpm validate`.

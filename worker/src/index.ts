@@ -112,6 +112,23 @@ export default {
       return json({ ok: true, id: suggestion.id }, 201, origin);
     }
 
+    if (request.method === 'DELETE') {
+      if (!env.ADMIN_TOKEN || request.headers.get('x-admin-token') !== env.ADMIN_TOKEN) {
+        return json({ error: 'unauthorized' }, 401, origin);
+      }
+      const id = url.searchParams.get('id');
+      if (!id) return json({ error: 'id query param required' }, 400, origin);
+      const list = await env.SUGGESTIONS.list({ prefix: 'sugg:', limit: 200 });
+      for (const k of list.keys) {
+        const s = await env.SUGGESTIONS.get<Suggestion>(k.name, 'json');
+        if (s?.id === id) {
+          await env.SUGGESTIONS.delete(k.name);
+          return json({ ok: true, deleted: id }, 200, origin);
+        }
+      }
+      return json({ error: 'not found' }, 404, origin);
+    }
+
     if (request.method === 'GET') {
       if (!env.ADMIN_TOKEN || request.headers.get('x-admin-token') !== env.ADMIN_TOKEN) {
         return json({ error: 'unauthorized' }, 401, origin);
