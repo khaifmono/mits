@@ -119,7 +119,7 @@ export default {
         status: 204,
         headers: {
           'access-control-allow-origin': origin,
-          'access-control-allow-methods': 'POST, GET, OPTIONS',
+          'access-control-allow-methods': 'POST, GET, DELETE, OPTIONS',
           'access-control-allow-headers': 'content-type, x-admin-token, x-session',
           'access-control-max-age': '86400',
         },
