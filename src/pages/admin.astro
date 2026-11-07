@@ -165,7 +165,7 @@ const fieldClass =
         <div class="sm:col-span-2"><button type="button" data-act="commit" class="btn btn-primary w-full justify-center">Accept → commit to data/tools.json</button></div>
       </div>`;
     editor.classList.remove('hidden');
-    editor.querySelector('[data-act="commit"]')?.addEventListener('click', () => commit(el));
+    editor.querySelector('[data-act="commit"]')?.addEventListener('click', () => commit(el, String(s.id)));
   }
 
   function collectEntry(el: HTMLElement): Record<string, unknown> {
