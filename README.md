@@ -65,14 +65,20 @@ cd worker && npx wrangler deploy   # suggest worker
 
 ## Admin — accepting suggestions
 
-**`mits.my/admin`** (unlisted, `noindex`). Paste two tokens once — both stay in your browser's localStorage:
+**`mits.my/admin`** (unlisted, `noindex`). Sign in with the admin email + password (set once as secrets on the `mits-suggest` worker — see below). A 7-day session is issued; tokens never touch the browser.
 
-- **Admin token** — the suggest worker's `ADMIN_TOKEN` (reads/deletes the queue)
-- **GitHub token** — PAT with **Contents: Read & write** on `khaifmono/mits` (commits accepted entries). Your existing `gh auth token` works.
+Secrets on worker `mits-suggest` (dashboard → Settings → Variables and Secrets):
 
-Flow per suggestion: **Accept → commit** opens a prefilled editor (fill tagline/description/license/…) → **Commit to data/tools.json** commits via the GitHub API → Workers Builds auto-deploys → **Delete** clears the queue entry. Or **Copy JSON** and do it manually. The page validates the entry against the schema before committing; CI re-validates.
+| Secret | Purpose |
+|---|---|
+| `ADMIN_TOKEN` | script access (`curl -H "x-admin-token: …"`) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | dashboard login (rate-limited 5 attempts / 15 min / IP) |
+| `GITHUB_TOKEN` | PAT with **Contents: Read & write** on the repo — used by the worker to commit accepted entries |
+| `GITHUB_REPO` *(var, optional)* | override target repo (default `khaifmono/mits`) |
 
-The queue API: `GET /suggest` lists, `DELETE /suggest?id=…` removes — both require the `x-admin-token` header.
+Flow per suggestion: **Accept → commit** opens a prefilled editor (fill tagline/description/license/…) → **Commit** posts to `/admin/accept` → the worker validates, commits to `data/tools.json`, clears the queue entry → Workers Builds auto-deploys. The worker re-validates the entry; CI re-validates too.
+
+The queue API: `GET /suggest` lists, `DELETE /suggest?id=…` removes — admin token or session.
 
 ## Adding a tool
 

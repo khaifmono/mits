@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { Check, Copy, KeyRound, LogOut, RefreshCw, Trash2 } from '@lucide/astro';
+import { KeyRound, LogOut, RefreshCw } from '@lucide/astro';
 
 const fieldClass =
   'w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-emerald-400/50 focus:outline-none';
@@ -11,28 +11,28 @@ const fieldClass =
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold tracking-tight text-zinc-100">Admin — suggestion queue</h1>
       <button id="logout" class="hidden items-center gap-1.5 font-mono text-xs text-zinc-500 hover:text-zinc-300" type="button">
-        <LogOut class="size-3.5" aria-hidden="true" /> clear tokens
+        <LogOut class="size-3.5" aria-hidden="true" /> log out
       </button>
     </div>
     <p class="mt-2 text-sm text-zinc-500">
-      Local-only page. Tokens stay in this browser's localStorage and are sent only to the suggest API and the GitHub API.
+      The session lives in this browser for 7 days. Credentials are verified by the suggest worker; tokens never touch the browser.
     </p>
 
-    <!-- token gate -->
+    <!-- login gate -->
     <section id="gate" class="mt-8 rounded-xl border border-white/10 bg-white/[0.02] p-5">
       <h2 class="flex items-center gap-2 font-semibold text-zinc-100">
-        <KeyRound class="size-4 text-emerald-400" aria-hidden="true" /> Credentials
+        <KeyRound class="size-4 text-emerald-400" aria-hidden="true" /> Sign in
       </h2>
       <div class="mt-4 space-y-4">
         <div>
-          <label for="in-token" class="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-zinc-500">Admin token (suggest queue)</label>
-          <input id="in-token" type="password" autocomplete="off" class={fieldClass} placeholder="ADMIN_TOKEN" />
+          <label for="in-email" class="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-zinc-500">Email</label>
+          <input id="in-email" type="email" autocomplete="username" class={fieldClass} placeholder="admin@mits.my" />
         </div>
         <div>
-          <label for="in-pat" class="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-zinc-500">GitHub token (to commit accepted entries — needs Contents: Read &amp; write)</label>
-          <input id="in-pat" type="password" autocomplete="off" class={fieldClass} placeholder="ghp_… / github_pat_…" />
+          <label for="in-password" class="mb-1.5 block font-mono text-[11px] uppercase tracking-wider text-zinc-500">Password</label>
+          <input id="in-password" type="password" autocomplete="current-password" class={fieldClass} />
         </div>
-        <button id="btn-save" type="button" class="btn btn-primary">Save &amp; load queue</button>
+        <button id="btn-login" type="button" class="btn btn-primary">Sign in</button>
         <p id="gate-status" class="text-sm text-red-300" hidden></p>
       </div>
     </section>
@@ -52,11 +52,7 @@ const fieldClass =
 
 <script>
   const apiBase = import.meta.env.PUBLIC_SUGGEST_API_URL || 'http://localhost:8787';
-  const repo = ((import.meta.env.PUBLIC_REPO_URL as string | undefined) || 'https://github.com/khaifmono/mits')
-    .replace('https://github.com/', '')
-    .replace(/\/$/, '');
-  const LS_TOKEN = 'mits_admin_token';
-  const LS_PAT = 'mits_gh_pat';
+  const LS_SESSION = 'mits_admin_session';
 
   const CATEGORIES = ['PaaS & Containers', 'Identity & Auth', 'Observability & Uptime', 'Storage & Sync', 'Developer Tools', 'Local AI', 'Office & Knowledge'];
   const INDEPENDENCE = ['100% Sovereign', 'Federated', 'Open Core'];
@@ -69,48 +65,49 @@ const fieldClass =
   const gateStatus = document.getElementById('gate-status')!;
   const logoutBtn = document.getElementById('logout') as HTMLButtonElement;
 
-  const getToken = () => localStorage.getItem(LS_TOKEN) ?? '';
-  const getPat = () => localStorage.getItem(LS_PAT) ?? '';
+  const getSession = (): string => localStorage.getItem(LS_SESSION) ?? '';
+  const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+  const esc = (v: unknown): string =>
+    String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  const slugify = (name: unknown): string =>
+    String(name ?? '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'tool-slug';
 
-  const esc = (s: string): string =>
-    s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-
-  const slugify = (name: string): string =>
-    name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'tool-slug';
-
-  function ghHeaders(): HeadersInit {
-    return {
-      authorization: `Bearer ${getPat()}`,
-      accept: 'application/vnd.github+json',
-      'x-github-api-version': '2022-11-28',
-      'content-type': 'application/json',
-    };
-  }
-
-  interface Suggestion {
-    id: string; name: string; url: string; replaces: string; category: string; notes: string; contact: string; ts: number;
-  }
-
-  async function loadQueue(): Promise<void> {
-    gateStatus.hidden = true;
-    const res = await fetch(`${apiBase}/suggest`, { headers: { 'x-admin-token': getToken() } });
-    if (res.status === 401) {
-      gate.hidden = false;
-      queue.hidden = true;
-      gateStatus.textContent = 'Bad admin token — try again.';
+  function showGate(message?: string): void {
+    queue.hidden = true;
+    gate.hidden = false;
+    logoutBtn.classList.add('hidden');
+    logoutBtn.classList.remove('inline-flex');
+    if (message) {
+      gateStatus.textContent = message;
       gateStatus.hidden = false;
-      return;
     }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = (await res.json()) as { suggestions: Suggestion[] };
+  }
+
+  function showQueue(): void {
     gate.hidden = true;
     queue.hidden = false;
     logoutBtn.classList.remove('hidden');
     logoutBtn.classList.add('inline-flex');
-    render(data.suggestions);
   }
 
-  function render(suggestions: Suggestion[]): void {
+  async function loadQueue(): Promise<void> {
+    gateStatus.hidden = true;
+    const res = await fetch(`${apiBase}/suggest`, { headers: { 'x-session': getSession() } });
+    if (res.status === 401) {
+      localStorage.removeItem(LS_SESSION);
+      showGate('Session expired — sign in again.');
+      return;
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data: unknown = await res.json();
+    if (!isRecord(data) || !('suggestions' in data) || !Array.isArray(data.suggestions)) {
+      throw new Error('unexpected API response');
+    }
+    showQueue();
+    render(data.suggestions.filter(isRecord));
+  }
+
+  function render(suggestions: Record<string, unknown>[]): void {
     count.textContent = String(suggestions.length);
     list.innerHTML = '';
     if (suggestions.length === 0) {
@@ -120,10 +117,10 @@ const fieldClass =
     for (const s of suggestions) list.appendChild(card(s));
   }
 
-  function card(s: Suggestion): HTMLElement {
+  function card(s: Record<string, unknown>): HTMLElement {
     const el = document.createElement('article');
     el.className = 'rounded-xl border border-white/10 bg-white/[0.02] p-5';
-    el.dataset.id = s.id;
+    el.dataset.id = esc(s.id);
     el.innerHTML = `
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -131,7 +128,6 @@ const fieldClass =
           <a href="${esc(s.url) || '#'}" target="_blank" rel="noopener noreferrer" class="font-mono text-xs text-emerald-400/80 hover:underline">${esc(s.url) || 'no url'}</a>
         </div>
         <div class="flex gap-2">
-          <button type="button" data-act="copy" class="btn btn-ghost !px-3 !py-1.5 text-xs"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy JSON</button>
           <button type="button" data-act="accept" class="btn btn-primary !px-3 !py-1.5 text-xs">Accept → commit</button>
           <button type="button" data-act="delete" class="btn !px-3 !py-1.5 border border-red-400/30 bg-red-400/10 text-xs text-red-300 hover:bg-red-400/20">Delete</button>
         </div>
@@ -147,7 +143,7 @@ const fieldClass =
     return el;
   }
 
-  function openEditor(el: HTMLElement, s: Suggestion): void {
+  function openEditor(el: HTMLElement, s: Record<string, unknown>): void {
     const editor = el.querySelector('.editor') as HTMLElement;
     const today = new Date().toISOString().slice(0, 10);
     editor.innerHTML = `
@@ -164,16 +160,19 @@ const fieldClass =
         <div><label class="mb-1 block font-mono text-[10px] uppercase text-zinc-600">Independence</label><select data-f="independenceLevel" class="w-full rounded border border-white/10 bg-white/[0.03] px-2 py-1.5 text-sm text-zinc-200">${INDEPENDENCE.map((i) => `<option>${i}</option>`).join('')}</select></div>
         <div><label class="mb-1 block font-mono text-[10px] uppercase text-zinc-600">Resources</label><select data-f="resourceRequirement" class="w-full rounded border border-white/10 bg-white/[0.03] px-2 py-1.5 text-sm text-zinc-200">${RESOURCES.map((r) => `<option>${r}</option>`).join('')}</select></div>
         <div><label class="mb-1 block font-mono text-[10px] uppercase text-zinc-600">Added</label><input data-f="addedAt" type="date" value="${today}" class="w-full rounded border border-white/10 bg-white/[0.03] px-2 py-1.5 text-sm text-zinc-200"></div>
-        <div class="flex items-center gap-2"><input data-f="featured" type="checkbox" id="feat-${s.id}" class="size-4"><label for="feat-${s.id}" class="text-sm text-zinc-400">Featured</label></div>
+        <div class="flex items-center gap-2"><input data-f="featured" type="checkbox" id="feat-${esc(s.id)}" class="size-4"><label for="feat-${esc(s.id)}" class="text-sm text-zinc-400">Featured</label></div>
         <p class="err sm:col-span-2 text-xs text-red-300" hidden></p>
-        <div class="sm:col-span-2"><button type="button" data-act="commit" class="btn btn-primary w-full justify-center">Commit to data/tools.json</button></div>
+        <div class="sm:col-span-2"><button type="button" data-act="commit" class="btn btn-primary w-full justify-center">Accept → commit to data/tools.json</button></div>
       </div>`;
     editor.classList.remove('hidden');
-    editor.querySelector('[data-act="commit"]')?.addEventListener('click', () => commit(el, s));
+    editor.querySelector('[data-act="commit"]')?.addEventListener('click', () => commit(el));
   }
 
   function collectEntry(el: HTMLElement): Record<string, unknown> {
-    const f = (name: string): string => (el.querySelector(`[data-f="${name}"]`) as HTMLInputElement)?.value?.trim() ?? '';
+    const f = (name: string): string => {
+      const input = el.querySelector(`[data-f="${name}"]`) as HTMLInputElement | HTMLTextAreaElement | null;
+      return input?.value.trim() ?? '';
+    };
     return {
       id: f('id'),
       name: f('name'),
@@ -196,7 +195,8 @@ const fieldClass =
     const errors: string[] = [];
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(String(entry.id))) errors.push('id must be a kebab-case slug');
     for (const k of ['name', 'tagline', 'description']) if (!entry[k]) errors.push(`${k} is required`);
-    if (!Array.isArray(entry.alternativeTo) || entry.alternativeTo.length === 0) errors.push('alternativeTo needs at least one entry');
+    const alts = entry.alternativeTo as string[];
+    if (!Array.isArray(alts) || alts.length === 0) errors.push('alternativeTo needs at least one entry');
     if (!/^https?:\/\/\S+$/.test(String(entry.siteUrl))) errors.push('siteUrl must be an http(s) URL');
     if (entry.repoUrl && !/^https?:\/\/\S+$/.test(String(entry.repoUrl))) errors.push('repoUrl must be an http(s) URL');
     if (!CATEGORIES.includes(String(entry.category))) errors.push('pick a category');
@@ -206,130 +206,101 @@ const fieldClass =
     return errors;
   }
 
-  async function commit(el: HTMLElement, s: Suggestion): Promise<void> {
+  function showMsg(el: HTMLElement, text: string, ok: boolean): void {
     const msg = el.querySelector('.msg') as HTMLElement;
-    const err = el.querySelector('.err') as HTMLElement;
-    err.hidden = true;
+    msg.textContent = text;
+    msg.className = `msg mt-3 text-sm ${ok ? 'text-emerald-300' : 'text-red-300'}`;
+    msg.hidden = false;
+  }
+
+  async function commit(el: HTMLElement, id: string): Promise<void> {
     const entry = collectEntry(el);
     const problems = validate(entry);
     if (problems.length > 0) {
+      const err = el.querySelector('.err') as HTMLElement;
       err.textContent = problems.join(' · ');
       err.hidden = false;
       return;
     }
-    if (!getPat()) {
-      msg.textContent = 'Missing GitHub token — add it at the top of the page.';
-      msg.className = 'msg mt-3 text-sm text-red-300';
-      msg.hidden = false;
-      return;
-    }
-
-    msg.textContent = 'Fetching data/tools.json from GitHub…';
-    msg.className = 'msg mt-3 text-sm text-zinc-400';
-    msg.hidden = false;
-
+    showMsg(el, 'Committing to data/tools.json…', true);
     try {
-      const fileUrl = `https://api.github.com/repos/${repo}/contents/data/tools.json?ref=main`;
-      const get = await fetch(fileUrl, { headers: ghHeaders() });
-      if (!get.ok) throw new Error(`GitHub GET failed: ${get.status}`);
-      const meta = (await get.json()) as { sha: string; content: string };
-      const current = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(meta.content), (c) => c.charCodeAt(0)))) as Record<string, unknown>[];
-      if (current.some((t) => t.id === entry.id)) throw new Error(`id "${entry.id}" already exists in tools.json`);
-      current.push(entry);
-      const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(current, null, 2))));
-
-      msg.textContent = 'Committing…';
-      const put = await fetch(`https://api.github.com/repos/${repo}/contents/data/tools.json`, {
-        method: 'PUT',
-        headers: ghHeaders(),
-        body: JSON.stringify({
-          message: `accept suggestion: ${s.name}`,
-          content: b64,
-          sha: meta.sha,
-          branch: 'main',
-        }),
+      const res = await fetch(`${apiBase}/admin/accept`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-session': getSession() },
+        body: JSON.stringify({ entry, suggestionId: id }),
       });
-      if (!put.ok) throw new Error(`GitHub PUT failed: ${put.status} ${(await put.json()).message ?? ''}`);
-
-      msg.textContent = 'Committed ✓ — deleting from queue…';
-      await deleteSuggestion(s.id, el, true);
-      msg.textContent = `Accepted ✓ — "${s.name}" committed to tools.json. Auto-deploy running…`;
-      msg.className = 'msg mt-3 text-sm text-emerald-300';
+      const data: unknown = await res.json();
+      const message = isRecord(data) && 'error' in data ? String(data.error) : res.ok ? '' : `HTTP ${res.status}`;
+      if (!res.ok || message) throw new Error(message || `HTTP ${res.status}`);
+      const commitSha = isRecord(data) && 'commit' in data && typeof data.commit === 'string' ? data.commit.slice(0, 8) : '';
+      el.remove();
+      count.textContent = String(Number(count.textContent ?? '1') - 1);
+      showMsg(el, `Accepted ✓ — committed ${commitSha} to data/tools.json. Auto-deploy running…`, true);
     } catch (e) {
-      msg.textContent = e instanceof Error ? e.message : 'Unknown error';
-      msg.className = 'msg mt-3 text-sm text-red-300';
+      showMsg(el, e instanceof Error ? e.message : 'Unknown error', false);
     }
   }
 
-  async function deleteSuggestion(id: string, el?: HTMLElement, silent = false): Promise<void> {
+  async function deleteSuggestion(id: string, el: HTMLElement): Promise<void> {
     const res = await fetch(`${apiBase}/suggest?id=${encodeURIComponent(id)}`, {
       method: 'DELETE',
-      headers: { 'x-admin-token': getToken() },
+      headers: { 'x-session': getSession() },
     });
-    if (!res.ok && !silent) {
-      const msg = el?.querySelector('.msg') as HTMLElement | null;
-      if (msg) {
-        msg.textContent = `Delete failed: HTTP ${res.status}`;
-        msg.className = 'msg mt-3 text-sm text-red-300';
-        msg.hidden = false;
-      }
-      return;
+    if (res.ok) {
+      el.remove();
+      count.textContent = String(Number(count.textContent ?? '1') - 1);
+    } else {
+      showMsg(el, `Delete failed: HTTP ${res.status}`, false);
     }
-    el?.remove();
-    count.textContent = String(Number(count.textContent ?? '1') - 1);
   }
 
   // wiring
-  (document.getElementById('btn-save') as HTMLButtonElement).addEventListener('click', () => {
-    const token = (document.getElementById('in-token') as HTMLInputElement).value.trim();
-    const pat = (document.getElementById('in-pat') as HTMLInputElement).value.trim();
-    if (!token) {
-      gateStatus.textContent = 'Admin token is required.';
+  (document.getElementById('btn-login') as HTMLButtonElement).addEventListener('click', async () => {
+    const email = (document.getElementById('in-email') as HTMLInputElement).value.trim();
+    const password = (document.getElementById('in-password') as HTMLInputElement).value;
+    if (!email || !password) {
+      gateStatus.textContent = 'Email and password are required.';
       gateStatus.hidden = false;
       return;
     }
-    localStorage.setItem(LS_TOKEN, token);
-    localStorage.setItem(LS_PAT, pat);
-    loadQueue().catch((e) => {
-      gateStatus.textContent = `Load failed: ${e.message}`;
-      gateStatus.hidden = false;
-    });
+    gateStatus.hidden = true;
+    try {
+      const res = await fetch(`${apiBase}/admin/login`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data: unknown = await res.json();
+      const error = isRecord(data) && 'error' in data ? String(data.error) : '';
+      if (!res.ok || error) throw new Error(error || `HTTP ${res.status}`);
+      const session = isRecord(data) && 'session' in data && typeof data.session === 'string' ? data.session : '';
+      if (!session) throw new Error('no session returned');
+      localStorage.setItem(LS_SESSION, session);
+      await loadQueue();
+    } catch (e) {
+      showGate(e instanceof Error ? e.message : 'Sign-in failed');
+    }
   });
 
   (document.getElementById('btn-refresh') as HTMLButtonElement).addEventListener('click', () => loadQueue());
 
   logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem(LS_TOKEN);
-    localStorage.removeItem(LS_PAT);
-    queue.hidden = true;
-    gate.hidden = false;
-    logoutBtn.classList.add('hidden');
+    localStorage.removeItem(LS_SESSION);
+    showGate();
   });
 
   list.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('button[data-act]') as HTMLButtonElement | null;
     if (!btn) return;
     const el = btn.closest('article') as HTMLElement;
-    const id = el.dataset.id!;
-    const name = el.querySelector('h3')?.textContent ?? '';
-    const s: Suggestion = { id, name, url: el.querySelector('a')?.textContent ?? '', replaces: '', category: '', notes: '', contact: '', ts: 0 };
-    if (btn.dataset.act === 'accept') openEditor(el, s);
-    if (btn.dataset.act === 'copy') {
-      const entry = collectEntry(el);
-      navigator.clipboard.writeText(JSON.stringify(entry, null, 2)).catch(() => {});
-      const original = btn.innerHTML;
-      btn.innerHTML = 'Copied ✓';
-      setTimeout(() => (btn.innerHTML = original), 1500);
+    const id = el.dataset.id ?? '';
+    if (btn.dataset.act === 'accept') {
+      const editor = el.querySelector('.editor') as HTMLElement;
+      if (editor.classList.contains('hidden')) openEditor(el, { name: el.querySelector('h3')?.textContent, url: el.querySelector('a')?.textContent, replaces: '', category: '', notes: '', id });
+      else editor.classList.add('hidden');
     }
-    if (btn.dataset.act === 'delete') {
-      if (confirm(`Delete suggestion "${name}"?`)) deleteSuggestion(id, el);
-    }
+    if (btn.dataset.act === 'delete' && confirm('Delete this suggestion?')) deleteSuggestion(id, el);
   });
 
-  if (getToken()) {
-    loadQueue().catch((e) => {
-      gateStatus.textContent = `Load failed: ${e.message}`;
-      gateStatus.hidden = false;
-    });
-  }
+  if (getSession()) loadQueue().catch((e) => showGate(`Load failed: ${e.message}`));
 </script>
